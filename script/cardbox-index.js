@@ -1,28 +1,66 @@
 'use strict';
 
-const items = [
-    { title: 'Mango People T-shirt', price: '$52.00', img: 'img/card-1.png' },
-    { title: 'Mango People T-shirt', price: '$52.00', img: 'img/card-2.png' },
-    { title: 'Mango People T-shirt', price: '$52.00', img: 'img/card-3.png' },
-    { title: 'Mango People T-shirt', price: '$52.00', img: 'img/card-4.png' },
-    { title: 'Mango People T-shirt', price: '$52.00', img: 'img/card-5.png' },
-    { title: 'Mango People T-shirt', price: '$52.00', img: 'img/card-6.png' },
-    { title: 'Mango People T-shirt', price: '$52.00', img: 'img/card-7.png' },
-    { title: 'Mango People T-shirt', price: '$52.00', img: 'img/card-8.png' },
-];
+class Items {
+    constructor(title, price, img) {
+        this._title = title;
+        this._price = price;
+        this._img = img;
+    }
 
-const $itemsList = document.querySelector('.card_box');
+    getPrice() {
+        return this._price;
+    }
 
-const renderItems = ({ title, price, img }) => {
-    return `<div class="card"><div class="card__top view"><img src="${img}"><div class="mask"><a href="#"><img src="img/cart-white.svg" alt=""><span>Add to Cart</span></a></div></div><div class="card__bottom"><a href="#"><p class="card__title">${title}</p><p class="card__price">${price}</p></a></div></div>`;
-};
+    render() {
+        return `<div class="card"><div class="card__top view"><img src="${this._img}"><div class="mask"><a href="#"><img src="img/cart-white.svg" alt=""><span>Add to Cart</span></a></div></div><div class="card__bottom"><a href="#"><p class="card__title">${this._title}</p><p class="card__price">${this._price}</p></a></div></div>`;
+    }
+}
 
-const renderItemsList = (list = items) => {
-    let itemsList = list.map(
-        item => renderItems(item)
-    ).join('');
+class ItemsInCart extends Items {
+    constructor(title, price, quantity = 1) {
+        super(title, price);
 
-    $itemsList.insertAdjacentHTML('beforeend', itemsList);
-};
+        this._quantity = quantity;
+    }
 
-renderItemsList();
+    getPrice() {
+        return this._price * this.quantity;
+    }
+
+    render() {
+        return `<div class="card"><div class="card__top view"><img src="${this._img}"><div class="mask"><a href="#"><img src="img/cart-white.svg" alt=""><span>Add to Cart</span></a></div></div><div class="card__bottom"><a href="#"><p class="card__title">${this._title}</p><p class="card__price">${this._price}</p></a></div></div>`;
+    }
+}
+
+class ItemsList {
+    constructor(items, container) {
+        this._items = items;
+        this._$itemsListContainer = container
+    }
+
+    renderItemsList() {
+        let itemsList = this._items.map(
+            items => items.render()
+        ).join(' ');
+
+        this._$itemsListContainer.insertAdjacentHTML('beforeend', itemsList);
+    }
+}
+
+const list = new ItemsList([
+    new Items('Mango People T-shirt', '$52.00', 'img/card-1.png'),
+    new Items('Mango People T-shirt', '$52.00', 'img/card-2.png'),
+    new Items('Mango People T-shirt', '$52.00', 'img/card-3.png'),
+    new Items('Mango People T-shirt', '$52.00', 'img/card-4.png'),
+    new Items('Mango People T-shirt', '$52.00', 'img/card-5.png'),
+    new Items('Mango People T-shirt', '$52.00', 'img/card-6.png'),
+    new Items('Mango People T-shirt', '$52.00', 'img/card-7.png'),
+    new Items('Mango People T-shirt', '$52.00', 'img/card-8.png'),
+], document.querySelector('.card_box'))
+
+const cart = new ItemsList([
+    new ItemsInCart('Mango People T-shirt', '$52.00', 'img/card-1.png'),
+    new ItemsInCart('Mango People T-shirt', '$52.00', 'img/card-2.png'),
+], document.querySelector('.cart'))
+
+list.renderItemsList();
