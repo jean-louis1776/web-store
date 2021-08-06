@@ -1,15 +1,18 @@
+//module.js
+import {bus} from './module.js';
 // Компоненты внизу, поскольку используют некотые переменные, созданные в объекте app
-
 const app = new Vue({
     el: '#app',
-    data: {
-        goods: [],
-        filteredGoods: [],
-        basketGoods: [],
-        searchLine: '',
-        isVisibleCart: true,
-        totalPriceMessage: '',
-        totalPriceCoin: ''
+    data() {
+        return {
+            goods: [],
+            filteredGoods: [],
+            basketGoods: [],
+            searchLine: '',
+            isVisibleCart: true,
+            totalPriceMessage: '',
+            totalPriceCoin: ''
+        }
     },
     methods: {
         makeGETRequest(url) {
@@ -35,9 +38,9 @@ const app = new Vue({
         addToBasket(id) {
             let toBasket;
 
-            this.goods.forEach(function(item) {
-                if(id == item.id) {
-                    toBasket = {id: item.id,title: item.title,price: item.price,img: item.img}
+            this.goods.forEach(function (item) {
+                if (id == item.id) {
+                    toBasket = {id: item.id, title: item.title, price: item.price, img: item.img}
                 }
             });
             this.basketGoods.push(toBasket);
@@ -47,12 +50,12 @@ const app = new Vue({
         },
         deleteFromBasket(id) {
             let getIdElemen;
-            this.basketGoods.forEach(function(item, i) {
+            this.basketGoods.forEach(function (item, i) {
                 let thisId = item.id;
-                if(id == thisId) {
+                if (id == thisId) {
                     getIdElemen = i;
                 }
-                
+
             });
             this.basketGoods.splice(getIdElemen, 1);
             this.calcAllGoods();
@@ -60,7 +63,7 @@ const app = new Vue({
             this.makePOSTRequest('/updateCart', this.basketGoods);
         },
         viewCart() {
-            switch(this.isVisibleCart) {
+            switch (this.isVisibleCart) {
                 case(false): {
                     this.isVisibleCart = true;
                     break;
@@ -71,6 +74,10 @@ const app = new Vue({
                 }
             }
         },
+        filterGoods(searchLine) {
+            let regexp = new RegExp(searchLine, 'i');
+            this.filteredGoods = this.goods.filter(good => regexp.test(good.title));
+        },
         calcAllGoods() {
             let totalPrice = 0;
             this.basketGoods.forEach((good) => {
@@ -80,32 +87,30 @@ const app = new Vue({
             });
             this.totalPriceMessage = 'Cумма товаров в корзине: ' + totalPrice;
             this.totalPriceCoin = totalPrice;
-        },
-        filterGoods() {
-            let regexp = new RegExp(this.searchLine, 'i');
-            this.filteredGoods = this.goods.filter(good => regexp.test(good.title));
         }
     },
     async created() {
         try {
+            bus.on('basket-add', this.addToBasket.bind(this));
+            bus.on('basket-remove', this.deleteFromBasket.bind(this));
+            bus.on('goods-filter', this.filterGoods.bind(this));
             this.goods = await this.makeGETRequest('/catalog');
             this.filteredGoods = this.goods;
 
             this.basketGoods = await this.makeGETRequest('/cart');
             let basketArray = this.basketGoods;
 
-            if(basketArray.lenght !== 0) {
+            if (basketArray.lenght !== 0) {
                 this.calcAllGoods();
-            } 
-        } catch(err) {
+            }
+        } catch (err) {
             console.error(err);
         }
     },
     mounted() {
         this.calcAllGoods();
     }
-})
-
+});
 // Компоненты товаров
 Vue.component('goods-list', {
     props: ['goods'],
@@ -113,7 +118,12 @@ Vue.component('goods-list', {
 })
 Vue.component('goods-item', {
     props: ['good'],
-    template: '<div class="goods-item"><img :src="good.img" :alt="good.title"><h3>{{good.title}}</h3><p>{{good.price}}</p><button :id="good.id" v-on:click="addBasket(event)">Добавить</button></div>'
+    template: '<div class="goods-item"><img :src="good.img" :alt="good.title"><h3>{{good.title}}</h3><p>{{good.price}}</p><button :id="good.id" v-on:click="fireAdd">Добавить</button></div>',
+    methods: {
+        fireAdd(event) {
+            bus.emit('basket-add', event.target.id);
+        }
+    }
 })
 // Компоненты корзины
 Vue.component('basket-list', {
@@ -122,20 +132,25 @@ Vue.component('basket-list', {
 })
 Vue.component('basket-item', {
     props: ['good'],
-    template: '<div class="basket-item"><img :src="good.img" :alt="good.title"><button :id="good.id" v-on:click="deleteItem(event)">&times;</button><div class="basket-item-info"><h3>{{good.title}}</h3><p>{{good.price}}</p></div></div>'
-})
+    template: '<div class="basket-item"><img :src="good.img" :alt="good.title"><button :id="good.id" v-on:click="fireRemove">&times;</button><div class="basket-item-info"><h3>{{good.title}}</h3><p>{{good.price}}</p></div></div>',
+    methods: {
+        fireRemove(event) {
+            bus.emit('basket-remove', event.target.id);
+        }
+    }
+});
 // Компоненты товаров
 Vue.component('search', {
     props: [],
-    template: '<div class="search"><input type="search" v-on:keydown.enter="filterGoods" v-model="app.searchLine" placeholder="Type and press enter"></div>'
+    template: '<div class="search"><input type="search" v-on:keydown.enter="fireFilter" v-model="search" placeholder="Type and press enter"></div>',
+    data() {
+        return {
+            search: ''
+        }
+    },
+    methods: {
+        fireFilter() {
+            bus.emit('goods-filter', this.search);
+        }
+    }
 });
-
-function filterGoods() {
-    app.filterGoods();
-}
-function addBasket(event) {
-    app.addToBasket(event.target.id);
-}
-function deleteItem(event) {
-    app.deleteFromBasket(event.target.id);
-}
