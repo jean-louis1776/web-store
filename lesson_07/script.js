@@ -7,7 +7,7 @@ const app = new Vue({
         filteredGoods: [],
         basketGoods: [],
         searchLine: '',
-        isVisibleCart: false,
+        isVisibleCart: true,
         totalPriceMessage: '',
         totalPriceCoin: ''
     },
@@ -15,26 +15,35 @@ const app = new Vue({
         makeGETRequest(url) {
             return new Promise((resolve, reject) => {
                 let xhr = window.XMLHttpRequest ? new window.XMLHttpRequest() : new window.ActiveXObject;
-                xhr.open("GET", url, true);
+                xhr.open('GET', url, true);
                 xhr.onload = () => resolve(JSON.parse(xhr.responseText));
                 xhr.onerror = () => reject(xhr.statusText);
                 xhr.send();
             });
         },
+        makePOSTRequest(url, data) {
+            return new Promise((resolve, reject) => {
+                let xhr = window.XMLHttpRequest ? new window.XMLHttpRequest() : new window.ActiveXObject;
+                xhr.open('POST', url, true);
+                xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8')
+                xhr.onload = () => resolve(JSON.parse(xhr.responseText));
+                xhr.onerror = () => reject(xhr.statusText);
+                // Вот где-то здесь собака порылась
+                xhr.send(JSON.stringify(data));
+            });
+        },
         addToBasket(id) {
             let toBasket;
+
             this.goods.forEach(function(item) {
                 if(id == item.id) {
-                    toBasket = {
-                        id: item.id,
-                        title: item.title,
-                        price: item.price,
-                        img: item.img
-                    }
+                    toBasket = {id: item.id,title: item.title,price: item.price,img: item.img}
                 }
             });
             this.basketGoods.push(toBasket);
             this.calcAllGoods();
+            // Обновляем card.json
+            this.makePOSTRequest('/addToCard', toBasket);
         },
         deleteFromBasket(id) {
             let getIdElemen;
@@ -47,6 +56,8 @@ const app = new Vue({
             });
             this.basketGoods.splice(getIdElemen, 1);
             this.calcAllGoods();
+            // Обновляем card.json
+            this.makePOSTRequest('/updateCart', this.basketGoods);
         },
         viewCart() {
             switch(this.isVisibleCart) {
@@ -77,8 +88,15 @@ const app = new Vue({
     },
     async created() {
         try {
-            this.goods = await this.makeGETRequest('response.json');
+            this.goods = await this.makeGETRequest('/catalog');
             this.filteredGoods = this.goods;
+
+            this.basketGoods = await this.makeGETRequest('/cart');
+            let basketArray = this.basketGoods;
+
+            if(basketArray.lenght !== 0) {
+                this.calcAllGoods();
+            } 
         } catch(err) {
             console.error(err);
         }
